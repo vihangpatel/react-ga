@@ -10,7 +10,8 @@
     "lint": "eslint src webpack.config.js test --ext .js,.jsx",
     "preversion": "npm test && npm run lint",
     "version": "node ./version-bower.js && npm run build && git add -A dist bower.json",
-    "postversion": "git push && git push --tags && npm publish"
+    "postversion": "git push && git push --tags && npm publish",
+    "fix": "eslint --fix ./src"
   },
   "types": "./types/index.d.ts",
   "repository": {
