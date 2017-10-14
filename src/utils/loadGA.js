@@ -1,7 +1,7 @@
-export default function () {
+export default function (successCallback, errorCallback) {
   // https://developers.google.com/analytics/devguides/collection/analyticsjs/
   /* eslint-disable */
-  (function (i, s, o, g, r, a, m) {
+  (function (i, s, o, g, r, a, m, p, q) {
     i['GoogleAnalyticsObject'] = r;
     i[r] = i[r] || function () {
       (i[r].q = i[r].q || []).push(arguments);
@@ -10,7 +10,9 @@ export default function () {
       m = s.getElementsByTagName(o)[0];
     a.async = 1;
     a.src = g;
+    a.onload = p;
+    a.onerror = q;
     m.parentNode.insertBefore(a, m);
-  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
+  })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga', successCallback, errorCallback);
   /* eslint-enable */
 }
