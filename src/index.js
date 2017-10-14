@@ -20,6 +20,8 @@ import UnboundOutboundLink from './components/OutboundLink';
 
 let _debug = false;
 let _titleCase = true;
+let _enableQueue = false;
+const _queue = [];
 
 let internalGa = () => {
   warn('ReactGA.initialize must be called first');
@@ -60,6 +62,10 @@ function _initialize(gaTrackingID, options) {
     if (options.titleCase === false) {
       _titleCase = false;
     }
+
+    if (options.enableQueue && options.enableQueue === true) {
+      _enableQueue = true;
+    }
   }
 
   if (options && options.gaOptions) {
@@ -69,13 +75,37 @@ function _initialize(gaTrackingID, options) {
   }
 }
 
+function _flushQueue() {
+  if (_enableQueue) {
+    if (_debug) {
+      log('Flushing queue');
+    }
+
+    _queue.forEach((args) => {
+      if (_debug) {
+        log(`Firing ga command with arguments: ${JSON.stringify(args)}`);
+      }
+
+      _gaCommand(...args);
+      _queue.length = 0;
+    });
+  }
+}
+
+function _onScriptload() {
+  _flushQueue();
+}
+
+function _onScriptError() {
+
+}
 
 export function initialize(configs, options) {
   if (typeof window === 'undefined') {
     return false;
   }
 
-  loadGA();
+  loadGA(_onScriptload, _onScriptError);
   internalGa = (...args) => window.ga(...args);
 
   if (Array.isArray(configs)) {
