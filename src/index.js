@@ -87,15 +87,6 @@ function _pushToQueue(...args) {
   }
 }
 
-function _pushToQueue(...args) {
-  if (_enableQueue) {
-    if (_debug) {
-      log(`Action pushed to queue ${args.join(', ')}`);
-    }
-    _queue.push([...args]);
-  }
-}
-
 function _flushQueue() {
   if (_debug) {
     log('Flushing queue');
