@@ -75,25 +75,46 @@ function _initialize(gaTrackingID, options) {
   }
 }
 
-function _flushQueue() {
+function _pushToQueue(...args) {
   if (_enableQueue) {
-    if (_debug) {
-      log('Flushing queue');
-    }
-
-    _queue.forEach((args) => {
+    if (typeof args !== 'object') {
       if (_debug) {
-        log(`Firing ga command with arguments: ${JSON.stringify(args)}`);
+        log('Expected object while pushing to queue');
       }
-
-      _gaCommand(...args);
-      _queue.length = 0;
-    });
+    } else {
+      _queue.push([...args]);
+    }
   }
 }
 
+function _pushToQueue(...args) {
+  if (_enableQueue) {
+    if (_debug) {
+      log(`Action pushed to queue ${args.join(', ')}`);
+    }
+    _queue.push([...args]);
+  }
+}
+
+function _flushQueue() {
+  if (_debug) {
+    log('Flushing queue');
+  }
+
+  _queue.forEach((args) => {
+    if (_debug) {
+      log(`Firing ga command with arguments: ${JSON.stringify(args)}`);
+    }
+
+    _gaCommand(...args);
+    _queue.length = 0;
+  });
+}
+
 function _onScriptload() {
-  _flushQueue();
+  if (_enableQueue) {
+    _flushQueue();
+  }
 }
 
 function _onScriptError() {
@@ -176,11 +197,15 @@ export function set(fieldsObject, trackerNames) {
  * @param {Array} trackerNames - (optional) a list of extra trackers to run the command on
  */
 export function send(fieldObject, trackerNames) {
-  _gaCommand(trackerNames, 'send', fieldObject);
-  if (_debug) {
-    log('called ga(\'send\', fieldObject);');
-    log(`with fieldObject: ${JSON.stringify(fieldObject)}`);
-    log(`with trackers: ${JSON.stringify(trackerNames)}`);
+  if (typeof ga !== 'undefined') {
+    _gaCommand(trackerNames, 'send', fieldObject);
+    if (_debug) {
+      log('called ga(\'send\', fieldObject);');
+      log(`with fieldObject: ${JSON.stringify(fieldObject)}`);
+      log(`with trackers: ${JSON.stringify(trackerNames)}`);
+    }
+  } else {
+    _pushToQueue([trackerNames, 'send', fieldObject]);
   }
 }
 
@@ -209,6 +234,8 @@ export function pageview(rawPath, trackerNames) {
       log('called ga(\'send\', \'pageview\', path);');
       log(`with path: ${path}`);
     }
+  } else {
+    _pushToQueue([trackerNames, 'send', 'pageview', path]);
   }
 }
 
@@ -232,14 +259,17 @@ export function modalview(rawModalName, trackerNames) {
     return;
   }
 
+  const path = `/modal/${modalName}`;
+
   if (typeof ga === 'function') {
-    const path = `/modal/${modalName}`;
     _gaCommand(trackerNames, 'send', 'pageview', path);
 
     if (_debug) {
       log('called ga(\'send\', \'pageview\', path);');
       log(`with path: ${path}`);
     }
+  } else {
+    _pushToQueue([trackerNames, 'send', 'pageview', path]);
   }
 }
 
@@ -253,28 +283,26 @@ export function modalview(rawModalName, trackerNames) {
  * @param {Array} trackerNames - (optional) a list of extra trackers to run the command on
  */
 export function timing({ category, variable, value, label } = {}, trackerNames) {
-  if (typeof ga === 'function') {
-    if (!category || !variable || !value || typeof value !== 'number') {
-      warn('args.category, args.variable ' +
+  if (!category || !variable || !value || typeof value !== 'number') {
+    warn('args.category, args.variable ' +
             'AND args.value are required in timing() ' +
             'AND args.value has to be a number');
-      return;
-    }
-
-    // Required Fields
-    const fieldObject = {
-      hitType: 'timing',
-      timingCategory: _format(category),
-      timingVar: _format(variable),
-      timingValue: value
-    };
-
-    if (label) {
-      fieldObject.timingLabel = _format(label);
-    }
-
-    send(fieldObject, trackerNames);
+    return;
   }
+
+  // Required Fields
+  const fieldObject = {
+    hitType: 'timing',
+    timingCategory: _format(category),
+    timingVar: _format(variable),
+    timingValue: value
+  };
+
+  if (label) {
+    fieldObject.timingLabel = _format(label);
+  }
+
+  send(fieldObject, trackerNames);
 }
 
 /**
@@ -288,68 +316,66 @@ export function timing({ category, variable, value, label } = {}, trackerNames) 
  * @param {Array} trackerNames - (optional) a list of extra trackers to run the command on
  */
 export function event({ category, action, label, value, nonInteraction, transport, ...args } = {}, trackerNames) {
-  if (typeof ga === 'function') {
-    // Simple Validation
-    if (!category || !action) {
-      warn('args.category AND args.action are required in event()');
-      return;
-    }
+  // Simple Validation
+  if (!category || !action) {
+    warn('args.category AND args.action are required in event()');
+    return;
+  }
 
-    // Required Fields
-    const fieldObject = {
-      hitType: 'event',
-      eventCategory: _format(category),
-      eventAction: _format(action)
-    };
+  // Required Fields
+  const fieldObject = {
+    hitType: 'event',
+    eventCategory: _format(category),
+    eventAction: _format(action)
+  };
 
     // Optional Fields
-    if (label) {
-      fieldObject.eventLabel = _format(label);
-    }
-
-    if (typeof value !== 'undefined') {
-      if (typeof value !== 'number') {
-        warn('Expected `args.value` arg to be a Number.');
-      } else {
-        fieldObject.eventValue = value;
-      }
-    }
-
-    if (typeof nonInteraction !== 'undefined') {
-      if (typeof nonInteraction !== 'boolean') {
-        warn('`args.nonInteraction` must be a boolean.');
-      } else {
-        fieldObject.nonInteraction = nonInteraction;
-      }
-    }
-
-    if (typeof transport !== 'undefined') {
-      if (typeof transport !== 'string') {
-        warn('`args.transport` must be a string.');
-      } else {
-        if (['beacon', 'xhr', 'image'].indexOf(transport) === -1) {
-          warn('`args.transport` must be either one of these values: `beacon`, `xhr` or `image`');
-        }
-
-        fieldObject.transport = transport;
-      }
-    }
-
-    Object.keys(args)
-      .filter(key => key.substr(0, 'dimension'.length) === 'dimension')
-      .forEach((key) => {
-        fieldObject[key] = args[key];
-      });
-
-    Object.keys(args)
-      .filter(key => key.substr(0, 'metric'.length) === 'metric')
-      .forEach((key) => {
-        fieldObject[key] = args[key];
-      });
-
-    // Send to GA
-    send(fieldObject, trackerNames);
+  if (label) {
+    fieldObject.eventLabel = _format(label);
   }
+
+  if (typeof value !== 'undefined') {
+    if (typeof value !== 'number') {
+      warn('Expected `args.value` arg to be a Number.');
+    } else {
+      fieldObject.eventValue = value;
+    }
+  }
+
+  if (typeof nonInteraction !== 'undefined') {
+    if (typeof nonInteraction !== 'boolean') {
+      warn('`args.nonInteraction` must be a boolean.');
+    } else {
+      fieldObject.nonInteraction = nonInteraction;
+    }
+  }
+
+  if (typeof transport !== 'undefined') {
+    if (typeof transport !== 'string') {
+      warn('`args.transport` must be a string.');
+    } else {
+      if (['beacon', 'xhr', 'image'].indexOf(transport) === -1) {
+        warn('`args.transport` must be either one of these values: `beacon`, `xhr` or `image`');
+      }
+
+      fieldObject.transport = transport;
+    }
+  }
+
+  Object.keys(args)
+    .filter(key => key.substr(0, 'dimension'.length) === 'dimension')
+    .forEach((key) => {
+      fieldObject[key] = args[key];
+    });
+
+  Object.keys(args)
+    .filter(key => key.substr(0, 'metric'.length) === 'metric')
+    .forEach((key) => {
+      fieldObject[key] = args[key];
+    });
+
+  // Send to GA
+  send(fieldObject, trackerNames);
 }
 
 /**
@@ -360,28 +386,26 @@ export function event({ category, action, label, value, nonInteraction, transpor
  * @param {Array} trackerNames - (optional) a list of extra trackers to run the command on
  */
 export function exception({ description, fatal }, trackerNames) {
-  if (typeof ga === 'function') {
-    // Required Fields
-    const fieldObject = {
-      hitType: 'exception'
-    };
+  // Required Fields
+  const fieldObject = {
+    hitType: 'exception'
+  };
 
     // Optional Fields
-    if (description) {
-      fieldObject.exDescription = _format(description);
-    }
-
-    if (typeof fatal !== 'undefined') {
-      if (typeof fatal !== 'boolean') {
-        warn('`args.fatal` must be a boolean.');
-      } else {
-        fieldObject.exFatal = fatal;
-      }
-    }
-
-    // Send to GA
-    send(fieldObject, trackerNames);
+  if (description) {
+    fieldObject.exDescription = _format(description);
   }
+
+  if (typeof fatal !== 'undefined') {
+    if (typeof fatal !== 'boolean') {
+      warn('`args.fatal` must be a boolean.');
+    } else {
+      fieldObject.exFatal = fatal;
+    }
+  }
+
+  // Send to GA
+  send(fieldObject, trackerNames);
 }
 
 export const plugin = {
