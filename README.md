@@ -104,7 +104,7 @@ ReactGA.initialize('UA-000000-01', {
 |gaTrackingID| `String`. Required. GA Tracking ID like `UA-000000-01`.|
 |options.debug| `Boolean`. Optional. If set to `true`, will output additional feedback to the console.|
 |options.titleCase| `Boolean`. Optional. Defaults to `true`. If set to `false`, strings will not be converted to title case before sending to GA.|
-|options.enableQueue| `Boolean`. Optional. Defaults to `false`. If set to `true`, all the GA actions will get queued if any of them is fired before downloading the script. |
+|options.enableQueue| `Boolean`. Optional. Defaults to `true`. If set to `false`, all the GA actions will not queued if any of them is fired before downloading the script. |
 |options.gaOptions| `Object`. Optional. [GA configurable create only fields.](https://developers.google.com/analytics/devguides/collection/analyticsjs/field-reference)|
 
 See example above for use with `react-router`.
