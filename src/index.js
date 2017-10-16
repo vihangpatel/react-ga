@@ -20,7 +20,7 @@ import UnboundOutboundLink from './components/OutboundLink';
 
 let _debug = false;
 let _titleCase = true;
-let _enableQueue = false;
+let _enableQueue = true;
 const _queue = [];
 
 let internalGa = () => {
@@ -82,7 +82,7 @@ function _pushToQueue(...args) {
         log('Expected object while pushing to queue');
       }
     } else {
-      _queue.push([...args]);
+      _queue.push(...args);
     }
   }
 }
@@ -98,8 +98,8 @@ function _flushQueue() {
     }
 
     _gaCommand(...args);
-    _queue.length = 0;
   });
+  _queue.length = 0;
 }
 
 function _onScriptload() {
@@ -189,7 +189,7 @@ export function set(fieldsObject, trackerNames) {
  * @param {Array} trackerNames - (optional) a list of extra trackers to run the command on
  */
 export function send(fieldObject, trackerNames) {
-  if (typeof ga !== 'undefined') {
+  if (typeof window.ga !== 'undefined') {
     _gaCommand(trackerNames, 'send', fieldObject);
     if (_debug) {
       log('called ga(\'send\', fieldObject);');

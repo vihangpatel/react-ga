@@ -1,12 +1,12 @@
 export default function (successCallback, errorCallback) {
   // https://developers.google.com/analytics/devguides/collection/analyticsjs/
   /* eslint-disable */
-  (function (i, s, o, g, r, a, m, p, q) {
+  (function (i, s, o, g, r, p, q) {
     i['GoogleAnalyticsObject'] = r;
     i[r] = i[r] || function () {
       (i[r].q = i[r].q || []).push(arguments);
     }, i[r].l = 1 * new Date();
-    a = s.createElement(o),
+    var a = s.createElement(o),
       m = s.getElementsByTagName(o)[0];
     a.async = 1;
     a.src = g;
