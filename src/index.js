@@ -109,7 +109,8 @@ function _onScriptload() {
 }
 
 function _onScriptError() {
-
+  // If script could not be loaded, flush the queue and release the memory
+  _queue.length = 0;
 }
 
 export function initialize(configs, options) {
